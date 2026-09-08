@@ -4,36 +4,34 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/api";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { login, signup } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-        const response = await fetch(`http://localhost:4000/${isLogin ? 'login' : 'signup'}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, password }),
-        });
+    setSubmitting(true);
 
-        if (!response.ok) {
-            navigate('/login');
-        }
-        navigate('/');
-        const data = await response.json();
-        console.log("Data: " + data);
-        // Assuming the token is returned in the response
-        localStorage.setItem('token', data.token);
-        // Redirect or update the UI as needed
-        console.log('Login successful');
+    try {
+      if (isLogin) {
+        await login(username, password);
+      } else {
+        await signup(username, password);
+      }
+      navigate("/");
     } catch (error) {
-        console.error('Error:', error);
+      const message =
+        error instanceof ApiError ? error.message : "Something went wrong";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -63,8 +61,11 @@ const Auth = () => {
                 className="w-full"
               />
             </div>
-            {isLogin}
-            <Button type="submit" className="w-full bg-deep-red hover:bg-brown">
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-deep-red hover:bg-brown"
+            >
               {isLogin ? "Sign In" : "Sign Up"}
             </Button>
           </form>
