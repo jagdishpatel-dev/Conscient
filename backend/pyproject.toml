@@ -1,0 +1,7 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = [".venv", "chroma_data", "evals/__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
