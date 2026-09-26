@@ -1,79 +1,64 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { BookOpen, Calendar, InfoIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-
-interface DiaryEntry {
-  title: string;
-  content: string;
-  Date: Date;
-}
+import { useAuth } from "@/context/AuthContext";
+import { api, DiaryEntry } from "@/lib/api";
+import { getMoodInfo } from "@/lib/moods";
+import MoodTrendChart from "@/components/MoodTrendChart";
 
 const Diary = () => {
+  const { token } = useAuth();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [aiAccess, setAiAccess] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | null>(null);
-  useEffect(() => {
-    try {
-      const pullEntries = async () => {
-        const response = await fetch("http://localhost:4000/journals", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + localStorage.getItem("token")!,
-          },
-        });
-        const data = await response.json();
-        console.log("Data 2 ", data);
-        setEntries(data);
-      };
-      pullEntries();
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  }, []);
+
+  const loadEntries = () => {
+    if (!token) return;
+    api
+      .listDiaryEntries(token)
+      .then(setEntries)
+      .catch((error) => console.error("Error loading entries:", error));
+  };
+
+  useEffect(loadEntries, [token]);
 
   const handleSaveEntry = async () => {
     if (!title.trim() || !content.trim()) {
       toast.error("Please fill in both title and content");
       return;
     }
-
-    const newEntry: DiaryEntry = {
-      title,
-      content,
-      Date: new Date(),
-    };
+    if (!token) return;
 
     try {
-      const response = await fetch("http://localhost:4000/journals", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + localStorage.getItem("token")!,
-        },
-        body: JSON.stringify(newEntry),
+      const saved = await api.createDiaryEntry(token, {
+        title,
+        content,
+        ai_access: aiAccess,
       });
+      setEntries((prev) => [saved, ...prev]);
+      setTitle("");
+      setContent("");
+      toast.success("Diary entry saved");
 
-      if (!response.ok) {
-        console.log("Error:", response);
+      // Mood is classified asynchronously on the backend; refresh once it's
+      // likely done so the badge/chart pick it up without a manual reload.
+      if (saved.ai_access) {
+        setTimeout(loadEntries, 4000);
       }
     } catch (error) {
       console.error("Error:", error);
+      toast.error("Couldn't save your entry. Please try again.");
     }
-
-    setEntries((prev) => [newEntry, ...prev]);
-    setTitle("");
-    setContent("");
-    toast.success("Diary entry saved");
   };
 
   return (
@@ -89,20 +74,30 @@ const Diary = () => {
                   Diary Entries
                 </h2>
               </div>
+              <div className="px-2 pt-2">
+                <MoodTrendChart entries={entries} />
+              </div>
               <ScrollArea className="h-[calc(100%-4rem)]">
                 <div className="p-4 space-y-2">
-                  {entries.map((entry, index) => (
+                  {entries.map((entry) => (
                     <button
-                      key={index}
+                      key={entry._id}
                       onClick={() => setSelectedEntry(entry)}
                       className="w-full p-3 text-left rounded-lg hover:bg-beige/20 transition-colors"
                     >
-                      <p className="font-medium text-brown truncate">
-                        {entry.title}
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium text-brown truncate">
+                          {entry.title}
+                        </p>
+                        {entry.mood && (
+                          <span title={entry.mood}>
+                            {getMoodInfo(entry.mood).emoji}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-brown/60 flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {new Date(entry.Date).toLocaleDateString()}
+                        {new Date(entry.date).toLocaleDateString()}
                       </p>
                     </button>
                   ))}
@@ -131,17 +126,22 @@ const Diary = () => {
                       This is your personal diary that you're free to write entries in. When this AI access is turned on, it helps reflect on your feelings and experiences, offering gentle insights while keeping your thoughts private and secure.                      </p>
                     </HoverCardContent>
                   </HoverCard>
+                  <Switch checked={aiAccess} onCheckedChange={setAiAccess} />
                 </div>
               </div>
 
               {selectedEntry ? (
                 <div className="space-y-4">
-                  <h2 className="text-2xl font-bold text-deep-red">
-                    {selectedEntry.title}
-                  </h2>
-                  {/* <p className="text-sm text-brown/60">
-                    {selectedEntry.date.toLocaleDateString()}
-                  </p> */}
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold text-deep-red">
+                      {selectedEntry.title}
+                    </h2>
+                    {selectedEntry.mood && (
+                      <Badge variant="outline" className="text-brown border-beige">
+                        {getMoodInfo(selectedEntry.mood).emoji} {selectedEntry.mood}
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-brown whitespace-pre-wrap">
                     {selectedEntry.content}
                   </p>

@@ -1,31 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { token, logout } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check login status immediately and set up interval to check periodically
-    const checkLoginStatus = () => {
-      const loginStatus = localStorage.getItem("isLoggedIn") === "true";
-      setIsLoggedIn(loginStatus);
-    };
-    // Check immediately on mount
-    checkLoginStatus();
-
-    // Set up interval to check periodically
-    const interval = setInterval(checkLoginStatus, 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-
   const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    setIsLoggedIn(false);
+    logout();
     toast.success("Successfully logged out!");
     navigate("/");
   };
@@ -49,7 +31,7 @@ const Navbar = () => {
             <Link to="/connect" className="text-brown hover:text-deep-red transition-colors">Connect</Link>
             <Link to="/about" className="text-brown hover:text-deep-red transition-colors">About</Link>
             <div className="flex items-center space-x-4">
-              {isLoggedIn ? (
+              {token ? (
                 <button 
                   onClick={handleLogout}
                   className="px-4 py-2 rounded-md bg-deep-red text-white hover:bg-brown transition-colors"

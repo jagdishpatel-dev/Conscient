@@ -1,1 +1,18 @@
 node_modules
+dist
+.env
+.env.local
+.DS_Store
+
+# Python / backend
+__pycache__/
+*.pyc
+.venv/
+venv/
+backend/.env
+backend/chroma_data/
+backend/.hf_cache/
+.pytest_cache/
+*.pkl
+
+.claude/settings.local.json

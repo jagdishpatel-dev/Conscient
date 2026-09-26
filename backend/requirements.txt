@@ -1,0 +1,17 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+beanie==1.29.0
+motor==3.6.0
+pydantic-settings==2.7.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.20
+python-dotenv==1.0.1
+langchain==1.3.14
+langchain-core==1.5.3
+langchain-openai==1.4.2
+langchain-chroma==1.1.0
+langchain-huggingface==1.2.2
+sentence-transformers==5.7.0
+transformers==5.14.1
